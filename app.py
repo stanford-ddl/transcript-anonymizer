@@ -9,7 +9,7 @@ from presidio_analyzer.nlp_engine import NlpEngineProvider
 # --- Presidio NLP setup ---
 nlp_configuration = {
     "nlp_engine_name": "spacy",
-    "models": [{"lang_code": "en", "model_name": "en_core_web_lg"}]  # or en_core_web_sm
+    "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}]  # or en_core_web_sm
 }
 provider = NlpEngineProvider(nlp_configuration=nlp_configuration)
 nlp_engine = provider.create_engine()
