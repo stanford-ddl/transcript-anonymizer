@@ -25,7 +25,20 @@ It uses Presidio to identify and anonymize names and locations.
 Upload a transcription file in `.txt` or `.xlsx` format, and it will automatically redact sensitive information.
 """)
 
+ENTITY_OPTIONS = [
+    "PERSON", "LOCATION", "EMAIL_ADDRESS", "PHONE_NUMBER", "DATE_TIME",
+    "IP_ADDRESS", "URL", "CREDIT_CARD", "US_SSN", "IBAN_CODE", "SWIFT_CODE",
+    "ORGANIZATION"  # Presidio supports ORGANIZATION (mapped via recognizers)
+]
+selected_entities = st.multiselect(
+    "Choose entity types to redact",
+    options=ENTITY_OPTIONS,
+    default=["PERSON", "LOCATION"],
+    help="Only these entities will be detected and redacted."
+)
+redaction_text = st.text_input("Replacement text for redactions", value="REDACTED")
 uploaded_file = st.file_uploader("Upload a .txt or .xlsx file", type=["txt", "xlsx"])
+
 
 text = None
 file_type = None
@@ -57,7 +70,7 @@ if text:
     raw_results = analyzer.analyze(
         text=text,
         language="en",
-        entities=target_entities,
+        entities=selected_entities,
         score_threshold=0.85
     )
 
@@ -79,7 +92,7 @@ if text:
         text=text,
         analyzer_results=results,
         operators={
-            "DEFAULT": OperatorConfig("replace", {"new_value": "**REDACTED**"}),
+            "DEFAULT": OperatorConfig("replace", {"new_value": redaction_text}),
         }
     ).text
 
