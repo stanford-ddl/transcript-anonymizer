@@ -41,7 +41,11 @@ if uploaded_file is not None:
     elif uploaded_file.name.endswith(".xlsx"):
         file_type = "xlsx"
         df = pd.read_excel(uploaded_file)
-        column_choice = st.selectbox("Select the column to redact:", df.columns)
+        default_index = 0
+        if "text" in df.columns:
+            default_index = list(df.columns).index("text")
+
+        column_choice = st.selectbox("Select the column to redact:", df.columns, index=default_index)
         if column_choice:
             # Combine rows into one text block for analysis
             text = "\n".join(df[column_choice].dropna().astype(str))
