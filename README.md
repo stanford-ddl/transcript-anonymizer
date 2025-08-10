@@ -1,1 +1,1 @@
-# transcript-anonymizer
+# Stanford DDL Transcript Anonymization Tool
