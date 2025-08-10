@@ -1,4 +1,6 @@
 import streamlit as st
+import pandas as pd
+import io
 from presidio_analyzer import AnalyzerEngine
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
@@ -20,31 +22,51 @@ st.title("Transcript Anonymizer")
 st.markdown("""
 This tool helps redact sensitive information from transcriptions of Stanford DDL sessions.
 It uses Presidio to identify and anonymize names and locations.
-Upload a transcription file in .txt format, and it will automatically redact sensitive information.""")
-uploaded_file = st.file_uploader("Upload a .txt file", type="txt")
+Upload a transcription file in `.txt` or `.xlsx` format, and it will automatically redact sensitive information.
+""")
 
+uploaded_file = st.file_uploader("Upload a .txt or .xlsx file", type=["txt", "xlsx"])
+
+text = None
+file_type = None
+df = None
+column_choice = None
+
+# --- Read file content ---
 if uploaded_file is not None:
-    text = uploaded_file.read().decode("utf-8")
+    if uploaded_file.name.endswith(".txt"):
+        file_type = "txt"
+        text = uploaded_file.read().decode("utf-8")
 
-    # Only names & locations; start with a modest threshold
-    target_entities = ["PERSON", "GPE", "LOC"]
+    elif uploaded_file.name.endswith(".xlsx"):
+        file_type = "xlsx"
+        df = pd.read_excel(uploaded_file)
+        column_choice = st.selectbox("Select the column to redact:", df.columns)
+        if column_choice:
+            # Combine rows into one text block for analysis
+            text = "\n".join(df[column_choice].dropna().astype(str))
+
+# --- Process redaction ---
+if text:
+    # Only detect names (PERSON) and locations (LOCATION)
+    target_entities = ["PERSON", "LOCATION"]
     raw_results = analyzer.analyze(
         text=text,
         language="en",
         entities=target_entities,
-        score_threshold=0.6
+        score_threshold=0.85
     )
 
-    # Post-filter to reduce false positives:
-    # - PERSON must be higher confidence
-    # - GPE/LOC slightly looser (to catch rarer place names)
-    # - drop lowercase single words (e.g., "yourself", "facilitate")
-    results = []
+    # Exclude certain location terms from redaction
+    EXCLUDE_WORDS = {
+        "america", "united states", "us", "usa", "u.s.",
+        "the united states", "the us", "the usa", "the u. s."
+    }
+
     results = []
     for r in raw_results:
-        if r.entity_type == "PERSON" and r.score < 0.85:
-            continue
-        if r.entity_type in {"GPE", "LOC"} and r.score < 0.70:
+        entity_text = text[r.start:r.end].lower()
+        if entity_text in EXCLUDE_WORDS:
             continue
         results.append(r)
 
@@ -54,18 +76,36 @@ if uploaded_file is not None:
         analyzer_results=results,
         operators={
             "DEFAULT": OperatorConfig("replace", {"new_value": "**REDACTED**"}),
-            "PERSON": OperatorConfig("replace", {"new_value": "[NAME]"}),
-            "GPE": OperatorConfig("replace", {"new_value": "[LOCATION]"}),
-            "LOC": OperatorConfig("replace", {"new_value": "[LOCATION]"}),
         }
     ).text
+
+    st.success("Redaction complete!")
 
     st.subheader("Redacted text:")
     st.text_area("", redacted, height=300)
 
-    st.download_button(
-        label="Download redacted file",
-        data=redacted.encode("utf-8"),
-        file_name="redacted.txt",
-        mime="text/plain"
-    )
+    # --- Download in the same format as uploaded ---
+    if file_type == "txt":
+        st.download_button(
+            label="Download redacted file",
+            data=redacted.encode("utf-8"),
+            file_name="redacted.txt",
+            mime="text/plain"
+        )
+
+    elif file_type == "xlsx" and df is not None and column_choice:
+        # Create a copy of the DataFrame to avoid modifying original
+        df_redacted = df.copy()
+        redacted_rows = redacted.split("\n")
+        # Assign redacted values back to same structure
+        df_redacted[column_choice + "_REDACTED"] = redacted_rows
+        # Save to BytesIO
+        output = io.BytesIO()
+        df_redacted.to_excel(output, index=False)
+        output.seek(0)
+        st.download_button(
+            label="Download redacted Excel file",
+            data=output,
+            file_name="redacted.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
