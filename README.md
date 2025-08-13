@@ -35,6 +35,3 @@ The tool is deployed online — no installation required.
 - **Replacement text**: Configured via the input field; defaults to `REDACTED`.
 - **Exclusion list**: Certain location terms like "United States" are not redacted (can be changed in code).
 - **Entity list**: You can expand or reduce `ENTITY_OPTIONS` in the code.
-
-## License
-MIT License — You are free to modify and distribute this tool.
