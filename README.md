@@ -1,7 +1,6 @@
 # Transcript Anonymizer
 
-This Streamlit application automatically redacts sensitive information from transcript files using [Microsoft Presidio](https://github.com/microsoft/presidio).  
-It is designed for anonymizing transcriptions of Stanford Deliberative Democracy Lab sessions, but can be used for any text-based content.
+This Streamlit application automatically redacts sensitive information from transcript files using [Microsoft Presidio](https://github.com/microsoft/presidio). It is designed for anonymizing transcriptions of Stanford Deliberative Democracy Lab sessions, but can be used for any text-based content.
 
 ## Features
 - **File formats supported:** `.txt` and `.xlsx`
